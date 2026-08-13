@@ -10,22 +10,32 @@ Group=www-data
 ExecStart=/usr/bin/python3 /opt/xlx-aprs-dprs/xlx_aprs_dprs.py --config /etc/xlx-aprs-dprs/config.json
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=8
+UMask=0027
+
+# Resource guardrails: the reflector remains the priority service.
+MemoryAccounting=true
+MemoryMax=192M
+CPUAccounting=true
+CPUQuota=10%
+TasksMax=32
+
+# Sandbox / least privilege. These controls are proven on the XLX026 workload.
 NoNewPrivileges=true
 PrivateTmp=true
+PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-RestrictSUIDSGID=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 ReadWritePaths=/var/lib/xlx-aprs-dprs
-UMask=0027
-
-# Current production envelope validated for the gateway workload.
-MemoryMax=192M
-TasksMax=32
 
 [Install]
 WantedBy=multi-user.target
