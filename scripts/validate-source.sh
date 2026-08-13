@@ -30,6 +30,7 @@ fi
 
 if grep -RniE \
     --exclude-dir='.git' \
+    --exclude-dir='.github' \
     --exclude='validate-source.sh' \
     --binary-files=without-match \
     -- \
