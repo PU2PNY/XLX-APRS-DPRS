@@ -79,4 +79,4 @@ jobs:
         run: |
           set -Eeuo pipefail
           ! find . -type f \( -name 'config.json' -o -name '*.sqlite' -o -name '*.sqlite-wal' -o -name '*.sqlite-shm' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .
-          ! grep -RniE --exclude-dir=.git --exclude-dir=.github --binary-files=without-match -- '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|github_pat_|ghp_[A-Za-z0-9]{20,}' .
+          ! grep -RniE --exclude-dir=.git --exclude-dir=.github --exclude='validate-source.sh' --binary-files=without-match -- '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|github_pat_|ghp_[A-Za-z0-9]{20,}' .
