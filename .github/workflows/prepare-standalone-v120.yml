@@ -22,6 +22,16 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/prepare-v120.py')
+          s=p.read_text(encoding='utf-8')
+          old='if not path.is_file() or ".git" in path.parts or ".github" in path.parts:'
+          new='if not path.is_file() or ".git" in path.parts or ".github" in path.parts or path == ROOT / "scripts/prepare-v120.py":'
+          if old not in s:
+              raise SystemExit('temporary helper audit anchor not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
           python3 scripts/prepare-v120.py
 
           mapfile -t manifest_files < <(awk '{sub(/^[0-9a-f]{64}  /, ""); print}' SOURCE-MANIFEST.sha256)
