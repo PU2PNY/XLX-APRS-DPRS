@@ -50,7 +50,7 @@ $dlabEsc = static fn(string $value): string =>
       <span class="dlab-status-dot" aria-hidden="true"></span>
       <div><small>DATA GATEWAY</small><strong id="dlabGatewayStatus">Verificando…</strong><span id="dlabGatewayDetail">Camada isolada do XLXD</span></div>
     </article>
-    <article class="dlab-status-card panel" data-service="module_b">
+    <article class="dlab-status-card panel" data-service="dextra_module">
       <span class="dlab-status-dot" aria-hidden="true"></span>
       <div><small><?= $dlabEsc($dlabReflector . '-' . $dlabModule) ?></small><strong id="dlabModuleStatus">Verificando…</strong><span id="dlabModuleDetail">DExtra somente recepção</span></div>
     </article>

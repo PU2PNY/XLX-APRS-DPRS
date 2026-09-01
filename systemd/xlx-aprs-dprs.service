@@ -20,7 +20,7 @@ CPUAccounting=true
 CPUQuota=10%
 TasksMax=32
 
-# Sandbox / least privilege. These controls are proven on the XLX026 workload.
+# Sandbox / least privilege. These controls are conservative defaults for an XLX reflector workload.
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true

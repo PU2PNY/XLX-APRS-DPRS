@@ -5,7 +5,7 @@ Rádio / hotspot
       │
       │ D-STAR / DExtra / Slow Data
       ▼
-   XLXD módulo B
+   XLXD módulo configurado
       │
       │ cliente independente
       ▼

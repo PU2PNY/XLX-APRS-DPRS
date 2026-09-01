@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """XLX APRS/D-PRS Gateway
 
-Read-only DExtra client for XLX module B + APRS-IS command service.
+Read-only DExtra client for a configured XLX module + APRS-IS command service.
 The DExtra side never transmits DV frames: it only links, keeps the link alive,
 and decodes D-STAR slow-data received from the module.
 
@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional
 
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 SOFTWARE = "XLX-APRS-DPRS"
 
 SCRAMBLER = (0x70, 0x4F, 0x93)
@@ -666,7 +666,7 @@ class DExtraModuleClient(threading.Thread):
     daemon = True
 
     def __init__(self, config: dict[str, Any], db: StateDB, stop: threading.Event) -> None:
-        super().__init__(name="dextra-b")
+        super().__init__(name="dextra-module")
         self.cfg = config
         self.site_name = str(config.get("site_name", "XLX")).strip().upper()[:12] or "XLX"
         self.db = db
@@ -685,7 +685,7 @@ class DExtraModuleClient(threading.Thread):
         )
 
     def _set_status(self, state: str, detail: str = "") -> None:
-        self.db.set_status("module_b", {"state": state, "detail": detail, "module": str(self.cfg.get("module", "B"))[:1]})
+        self.db.set_status("dextra_module", {"state": state, "detail": detail, "module": str(self.cfg.get("module", "B"))[:1]})
 
     def run(self) -> None:
         if not self.cfg.get("enabled", False):
@@ -797,13 +797,13 @@ class DExtraModuleClient(threading.Thread):
             data = ev.data
             call = safe_callsign(str(data.get("source", ""))) or header_call
             if "lat" in data and "lon" in data and call:
-                self.db.update_station(call, float(data["lat"]), float(data["lon"]), "DPRS_MODULE_B", "DSTAR", module, str(data.get("format", "GPS-A")), raw_hash=hashlib.sha256(str(data.get("packet", "")).encode()).hexdigest())
+                self.db.update_station(call, float(data["lat"]), float(data["lon"]), "DPRS_MODULE", "DSTAR", module, str(data.get("format", "GPS-A")), raw_hash=hashlib.sha256(str(data.get("packet", "")).encode()).hexdigest())
             elif call:
-                self.db.add_event("dprs", call, "DPRS_MODULE_B", module, "GPS-A validado sem posição decodificada")
+                self.db.add_event("dprs", call, "DPRS_MODULE", module, "GPS-A validado sem posição decodificada")
         elif ev.kind == "position":
             data = ev.data
             if header_call:
-                self.db.update_station(header_call, float(data["lat"]), float(data["lon"]), "DPRS_MODULE_B", "DSTAR", module, str(data.get("format", "NMEA")), data.get("speed_knots"), data.get("course"))
+                self.db.update_station(header_call, float(data["lat"]), float(data["lon"]), "DPRS_MODULE", "DSTAR", module, str(data.get("format", "NMEA")), data.get("speed_knots"), data.get("course"))
         elif ev.kind == "text" and header_call:
             # Do not expose arbitrary text content in the public snapshot.
             self.db.add_event("text", header_call, "DSTAR_SLOW_DATA", module, "Texto DV recebido")

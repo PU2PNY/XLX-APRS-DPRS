@@ -1,8 +1,8 @@
 # XLX-APRS-DPRS
 
-Módulo opcional APRS / D-PRS para instalações XLX com o painel moderno.
+Componente independente APRS / D-PRS para refletores XLX e para o XLX Modern Dashboard.
 
-Este repositório mantém o gateway de dados separado do core do XLXD. A instalação cria:
+Este é o repositório oficial e exclusivo do componente APRS/D-PRS. Ele mantém o gateway de dados separado do core do XLXD e separado do repositório do dashboard. A instalação cria:
 
 - um cliente DExtra independente para observar o módulo de dados (por padrão, módulo B);
 - conexão opcional ao APRS-IS;
@@ -87,13 +87,16 @@ Também é possível informar outro caminho com `--dashboard-dir`.
 
 ## Instalação não interativa
 
-Exemplo com leitura do módulo B, APRS-IS e TX APRS:
+Exemplo com leitura do módulo C, APRS-IS e TX APRS:
 
 ```bash
 sudo bash install.sh \
   --dashboard-dir /var/www/html/xlx-dashboard \
   --reflector-name XLX000 \
   --reflector-host 127.0.0.1 \
+  --reflector-module C \
+  --dextra-port 30001 \
+  --client-module G \
   --client-callsign PY2ABC \
   --aprs-login PY2ABC-10 \
   --enable-aprs-tx \
@@ -102,6 +105,23 @@ sudo bash install.sh \
 ```
 
 Quando `--enable-aprs-tx` é usado, o gateway grava `passcode: "auto"` no arquivo local e calcula o passcode APRS-IS em runtime. Nenhum passcode real precisa ser versionado.
+
+
+## Parâmetros do módulo XLX
+
+Os valores padrão continuam compatíveis com a instalação tradicional:
+
+```text
+reflector module: B
+DExtra port:      30001
+client module:    G
+```
+
+Eles podem ser alterados sem editar código usando `--reflector-module`, `--dextra-port` e `--client-module`.
+
+## Integração com o XLX Modern Dashboard
+
+O código APRS/D-PRS não deve ser copiado para o repositório do dashboard. O instalador deste repositório publica a interface em `<dashboard>/aprs-dprs/`. O dashboard apenas aponta para essa rota quando o componente estiver instalado.
 
 ## Conta administrativa inicial
 
@@ -169,7 +189,7 @@ A integração no repositório principal só deve ser fixada depois de existir u
 
 ## Migração de instalações antigas
 
-O instalador aborta se detectar o serviço legado `xlx026-digital-lab.service` ativo.
+O instalador procura genericamente por um serviço legado `*-digital-lab.service` ativo e aborta antes de instalar.
 
 Isso é intencional: executar dois gateways em paralelo no mesmo módulo pode duplicar conexões e atividade APRS.
 

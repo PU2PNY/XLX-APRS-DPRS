@@ -16,6 +16,9 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DASHBOARD=""
 REFLECTOR_NAME="XLX"
 REFLECTOR_HOST="127.0.0.1"
+REFLECTOR_MODULE="B"
+DEXTRA_PORT="30001"
+CLIENT_MODULE="G"
 CLIENT_CALLSIGN=""
 APRS_LOGIN=""
 APRS_TX=0
@@ -30,8 +33,11 @@ Uso:
 
 Opcoes:
   --dashboard-dir PATH       Painel moderno existente
-  --reflector-name NOME      Ex.: XLX026
+  --reflector-name NOME      Ex.: XLX123
   --reflector-host HOST      IP/host do XLXD; padrao 127.0.0.1
+  --reflector-module LETRA   Modulo XLX monitorado; padrao B
+  --dextra-port PORTA        Porta DExtra do XLXD; padrao 30001
+  --client-module LETRA      Modulo do cliente DExtra; padrao G
   --client-callsign CALL     Indicativo do cliente DExtra
   --aprs-login CALL-SSID     Indicativo APRS-IS do servico
   --enable-aprs-tx           Habilita TX APRS usando passcode "auto"
@@ -47,6 +53,9 @@ while [ "$#" -gt 0 ]; do
         --dashboard-dir) DASHBOARD="${2:-}"; shift 2 ;;
         --reflector-name) REFLECTOR_NAME="${2:-}"; shift 2 ;;
         --reflector-host) REFLECTOR_HOST="${2:-}"; shift 2 ;;
+        --reflector-module) REFLECTOR_MODULE="${2:-}"; shift 2 ;;
+        --dextra-port) DEXTRA_PORT="${2:-}"; shift 2 ;;
+        --client-module) CLIENT_MODULE="${2:-}"; shift 2 ;;
         --client-callsign) CLIENT_CALLSIGN="${2:-}"; shift 2 ;;
         --aprs-login) APRS_LOGIN="${2:-}"; shift 2 ;;
         --enable-aprs-tx) APRS_TX=1; shift ;;
@@ -77,10 +86,15 @@ PY
 [ -f "$ROOT/systemd/xlx-aprs-dprs.service" ] || fail "Unit systemd ausente."
 [ -f "$ROOT/scripts/init-accounts.php" ] || fail "Inicializador de contas ausente."
 
-# Não permite instalar o novo serviço ao lado do legado ativo: dois gateways no módulo B
-# poderiam duplicar conexões/atividade APRS.
-if systemctl is-active --quiet xlx026-digital-lab.service 2>/dev/null; then
-    fail "Servico legado xlx026-digital-lab esta ativo. Use um procedimento de migracao dedicado; este instalador nao executa coexistencia."
+# Não permite instalar ao lado de um Digital Lab legado ativo. A detecção é
+# genérica para evitar amarrar o instalador a um refletor específico.
+LEGACY_SERVICE="$(systemctl list-units --type=service --state=active --no-legend --no-pager 2>/dev/null \
+    | awk '{print $1}' \
+    | grep -Ei '(^|-)digital-lab\.service$' \
+    | grep -v '^xlx-aprs-dprs\.service$' \
+    | head -n1 || true)"
+if [ -n "$LEGACY_SERVICE" ]; then
+    fail "Servico Digital Lab legado ativo: $LEGACY_SERVICE. Use migracao controlada; coexistencia nao e permitida."
 fi
 
 if [ -e /etc/systemd/system/xlx-aprs-dprs.service ] || [ -d /opt/xlx-aprs-dprs ]; then
@@ -111,10 +125,16 @@ fi
 [ -f "$DASHBOARD/assets/app.css" ] || fail "assets/app.css do dashboard ausente."
 
 REFLECTOR_NAME="$(printf '%s' "$REFLECTOR_NAME" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9_-')"
+REFLECTOR_MODULE="$(printf '%s' "$REFLECTOR_MODULE" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z' | cut -c1)"
+CLIENT_MODULE="$(printf '%s' "$CLIENT_MODULE" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z' | cut -c1)"
 CLIENT_CALLSIGN="$(printf '%s' "$CLIENT_CALLSIGN" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9')"
 APRS_LOGIN="$(printf '%s' "$APRS_LOGIN" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9-')"
 
 [ -n "$REFLECTOR_NAME" ] || fail "Nome do refletor invalido."
+[[ "$REFLECTOR_MODULE" =~ ^[A-Z]$ ]] || fail "Modulo do refletor invalido; use uma letra A-Z."
+[[ "$CLIENT_MODULE" =~ ^[A-Z]$ ]] || fail "Modulo do cliente DExtra invalido; use uma letra A-Z."
+[[ "$DEXTRA_PORT" =~ ^[0-9]+$ ]] || fail "Porta DExtra invalida."
+[ "$DEXTRA_PORT" -ge 1 ] && [ "$DEXTRA_PORT" -le 65535 ] || fail "Porta DExtra fora do intervalo 1-65535."
 
 if [ -n "$CLIENT_CALLSIGN" ] && ! valid_base_call "$CLIENT_CALLSIGN"; then
     fail "Indicativo DExtra invalido: $CLIENT_CALLSIGN"
@@ -180,6 +200,9 @@ echo
 echo "Dashboard       : $DASHBOARD"
 echo "Refletor        : $REFLECTOR_NAME"
 echo "Host XLXD       : $REFLECTOR_HOST"
+echo "Modulo XLX      : $REFLECTOR_MODULE"
+echo "Porta DExtra    : $DEXTRA_PORT"
+echo "Modulo cliente  : $CLIENT_MODULE"
 echo "Cliente DExtra  : ${CLIENT_CALLSIGN:-DESATIVADO}"
 echo "APRS login      : ${APRS_LOGIN:-DESATIVADO}"
 echo "APRS TX         : $([ "$APRS_TX" -eq 1 ] && echo SIM || echo NAO)"
@@ -202,12 +225,16 @@ python3 - \
     "$STAGE/etc/config.json" \
     "$REFLECTOR_NAME" \
     "$REFLECTOR_HOST" \
+    "$REFLECTOR_MODULE" \
+    "$DEXTRA_PORT" \
+    "$CLIENT_MODULE" \
     "$CLIENT_CALLSIGN" \
     "$APRS_LOGIN" \
     "$APRS_TX" <<'PY'
 import json, sys
-out, name, host, client, aprs, tx = sys.argv[1:]
+out, name, host, module, dextra_port, client_module, client, aprs, tx = sys.argv[1:]
 tx = tx == "1"
+dextra_port = int(dextra_port)
 cfg = {
     "database": "/var/lib/xlx-aprs-dprs/digital-lab.sqlite",
     "public_snapshot": "/var/lib/xlx-aprs-dprs/public.json",
@@ -217,10 +244,10 @@ cfg = {
     "reflector": {
         "enabled": bool(client),
         "host": host,
-        "port": 30001,
-        "module": "B",
+        "port": dextra_port,
+        "module": module,
         "client_callsign": client,
-        "client_module": "G"
+        "client_module": client_module
     },
     "aprs": {
         "enabled": bool(aprs),
@@ -234,7 +261,7 @@ cfg = {
     "site": {
         "title": f"{name} APRS/D-PRS",
         "reflector": name,
-        "module": "B"
+        "module": module
     }
 }
 with open(out, "w", encoding="utf-8") as f:
