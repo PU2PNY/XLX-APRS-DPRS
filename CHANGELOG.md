@@ -7,6 +7,6 @@
 - adiciona instalação, atualização, backup e remoção independentes;
 - cria banco de autenticação vazio em instalações novas, sem copiar contas da produção;
 - protege configuração, bancos, tokens, sessões, chaves e backups via `.gitignore` e validação;
-- bloqueia coexistência acidental com o serviço legado `xlx026-digital-lab.service`;
+- bloqueia coexistência acidental com um serviço Digital Lab legado ativo;
 - permite integração opcional pelo XLX Modern Installer usando commit e SHA-256 fixados;
 - adiciona validação automática de Bash, PHP, JavaScript, Python, manifesto e permissões executáveis.
