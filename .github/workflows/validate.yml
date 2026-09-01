@@ -21,6 +21,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           sha256sum -c SOURCE-MANIFEST.sha256
+          echo "Release hashes:"
+          sha256sum install.sh SOURCE-MANIFEST.sha256
 
       - name: Validate Bash
         shell: bash
@@ -73,6 +75,13 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash scripts/validate-source.sh
+
+      - name: Reject reflector-specific identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ! grep -RniE --exclude-dir=.git --exclude-dir=.github --binary-files=without-match -- \
+            '(XLX026|XRF026|xlx026\.net|Santa[[:space:]]+Isabel)' .
 
       - name: Reject runtime data and secrets
         shell: bash
